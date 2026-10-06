@@ -1,17 +1,26 @@
-import React, { useState } from "react";
+import { AppIcons } from "@/components/AppIcons";
+import { Input } from "@/components/Input";
+import { Div, H1, P, Span } from "@expo/html-elements";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import { Link, useRouter } from "expo-router";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
+import { makeRedirectUri } from "expo-auth-session";
+import { Ionicons } from "@expo/vector-icons";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppIcons } from "@/components/AppIcons";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -29,79 +38,176 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await AsyncStorage.setItem("authToken", "mock_user_token_12345");
-      router.replace("/home");
-    } catch (err) {
-      setError("Failed to log in. Please try again.");
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      
+      router.replace("/(tabs)/home");
+    } catch (err: any) {
+      setError(err.message || "Failed to log in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleOAuth(provider: "google" | "apple") {
+    setLoading(true);
+    setError("");
+    try {
+      const redirectUrl = makeRedirectUri({
+        path: "/(tabs)/home",
+      });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: Platform.OS !== "web",
+        },
+      });
+
+      if (error) throw error;
+
+      if (Platform.OS !== "web" && data?.url) {
+        const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (res.type === "success" && res.url) {
+          // Parse hash for access_token and refresh_token
+          const urlParams = new URLSearchParams(res.url.split('#')[1]);
+          const accessToken = urlParams.get('access_token');
+          const refreshToken = urlParams.get('refresh_token');
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || `Failed to log in with ${provider}`);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0B2A24]">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1 justify-center px-7"
-      >
-        <View className="items-center mb-6">
-          <AppIcons.Auth.MainLogo width={220} height={120} />
-        </View>
+    <View className="flex-1 bg-black">
+      <LinearGradient
+        colors={["#062b21", "#0f6e56", "#041410"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View className="absolute top-10 -left-10 w-64 h-64 bg-[#5DCAA5] rounded-full opacity-30 blur-3xl" />
+      <View className="absolute bottom-20 -right-20 w-80 h-80 bg-[#169C75] rounded-full opacity-20 blur-3xl" />
 
-        <View className="mb-6">
-          <Text className="text-3xl font-bold text-[#F3FBF8] mb-1">Welcome Back</Text>
-          <Text className="text-sm text-[#9FE1CB]">Log in to access Guardio Lens</Text>
-        </View>
+      <SafeAreaView className="flex-1">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          className="flex-1 justify-center px-6"
+        >
+          <View className="rounded-[36px] border border-white/20 overflow-hidden bg-black/10">
+            <BlurView intensity={40} tint="dark">
+              <View className="p-8">
+                <Div className="items-center mb-6">
+                  <AppIcons.Auth.MainLogo width={80} height={80} />
+                  <H1 className="m-0 text-3xl font-extrabold text-white mt-4 mb-2 tracking-tight">
+                    Guardio Lens
+                  </H1>
+                  <P className="m-0 text-sm text-white/70 text-center font-medium">
+                    Log in to monitor your secure zones
+                  </P>
+                </Div>
 
-        {error ? <Text className="text-[#FF6B6B] mb-4 text-sm">{error}</Text> : null}
+                {error ? (
+                  <Div className="bg-red-500/20 border border-red-500/40 rounded-xl p-3 mb-4">
+                    <P className="m-0 text-[#FF6B6B] text-center text-sm font-medium">
+                      {error}
+                    </P>
+                  </Div>
+                ) : null}
 
-        <View className="gap-4">
-          <View className="gap-2">
-            <Text className="text-sm text-[#E2F6F0] font-medium">Email</Text>
-            <TextInput
-              className="bg-[#133C34] rounded-xl px-4 py-3.5 text-[#F3FBF8] text-base border border-[#1E5448]"
-              placeholder="user@example.com"
-              placeholderTextColor="#5E7C75"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-            />
+                <Div className="gap-4">
+                  <Input
+                    label="Email Address"
+                    placeholder="user@example.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+
+                  <View>
+                    <Input
+                      label="Password"
+                      placeholder="••••••••"
+                      secureTextEntry
+                      value={password}
+                      onChangeText={setPassword}
+                    />
+                    <Link href="/reset" asChild>
+                      <TouchableOpacity className="absolute right-0 top-0">
+                        <Span className="text-[#5DCAA5] text-xs font-bold mt-1">Forgot?</Span>
+                      </TouchableOpacity>
+                    </Link>
+                  </View>
+
+                  <TouchableOpacity
+                    className="bg-[#5DCAA5] rounded-2xl py-4 items-center mt-2 shadow-lg shadow-[#5DCAA5]/30"
+                    onPress={handleLogin}
+                    disabled={loading}
+                    activeOpacity={0.8}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#0B2A24" />
+                    ) : (
+                      <Span className="text-[#0B2A24] text-base font-extrabold uppercase tracking-wider">
+                        Log In
+                      </Span>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <View className="flex-row items-center justify-center my-2 opacity-50">
+                    <View className="h-[1px] flex-1 bg-white" />
+                    <Span className="text-white mx-4 font-bold text-xs">OR</Span>
+                    <View className="h-[1px] flex-1 bg-white" />
+                  </View>
+                  
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      className="flex-1 bg-white/10 border border-white/20 rounded-2xl py-3 flex-row items-center justify-center gap-2"
+                      onPress={() => handleOAuth("apple")}
+                      disabled={loading}
+                    >
+                      <Ionicons name="logo-apple" size={20} color="white" />
+                      <Span className="text-white font-semibold">Apple</Span>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 bg-white/10 border border-white/20 rounded-2xl py-3 flex-row items-center justify-center gap-2"
+                      onPress={() => handleOAuth("google")}
+                      disabled={loading}
+                    >
+                      <Ionicons name="logo-google" size={18} color="white" />
+                      <Span className="text-white font-semibold">Google</Span>
+                    </TouchableOpacity>
+                  </View>
+                </Div>
+
+                <Div className="flex-row justify-center mt-6 pt-2">
+                  <Span className="text-white/60 text-sm font-medium">
+                    New to Guardio?{" "}
+                  </Span>
+                  <Link href="/signup" asChild>
+                    <TouchableOpacity>
+                      <Span className="text-[#5DCAA5] text-sm font-bold">
+                        Create an account
+                      </Span>
+                    </TouchableOpacity>
+                  </Link>
+                </Div>
+              </View>
+            </BlurView>
           </View>
-
-          <View className="gap-2">
-            <Text className="text-sm text-[#E2F6F0] font-medium">Password</Text>
-            <TextInput
-              className="bg-[#133C34] rounded-xl px-4 py-3.5 text-[#F3FBF8] text-base border border-[#1E5448]"
-              placeholder="••••••••"
-              placeholderTextColor="#5E7C75"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-          </View>
-
-          <TouchableOpacity
-            className="bg-[#5DCAA5] rounded-xl py-4 items-center mt-2"
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#0B2A24" />
-            ) : (
-              <Text className="text-[#0B2A24] text-base font-bold">Log In</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View className="flex-row justify-center mt-8">
-          <Text className="text-[#9FE1CB] text-sm">Don't have an account? </Text>
-          <Link href="/signup" className="text-[#5DCAA5] text-sm font-bold">
-            Sign Up
-          </Link>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }

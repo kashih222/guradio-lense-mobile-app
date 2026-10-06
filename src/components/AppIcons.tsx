@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { G, Rect, Path, Circle, Text as SvgText, SvgProps } from "react-native-svg";
+import Svg, { Circle, G, Path, Rect, SvgProps } from "react-native-svg";
 
 interface LogoProps extends SvgProps {
   width?: number;
@@ -16,47 +16,22 @@ interface LogoProps extends SvgProps {
  */
 export const MainLogo: React.FC<LogoProps> = ({
   width = 240,
-  height = 140,
-  showText = true,
+  height = 240,
+  showText = true, // preserved for compatibility
   textColor = "#F3FBF8",
   primaryColor = "#0F6E56",
   bgColor = "#E1F5EE",
   ...props
 }) => {
-  if (!showText) {
-    return (
-      <Svg width={width} height={height} viewBox="0 0 240 240" {...props}>
-        <Rect x="0" y="0" width="240" height="240" rx="52" fill={bgColor} stroke={primaryColor} strokeWidth="1" />
-        <Path d="M120 40 L188 66 L188 130 C188 176 158 206 120 220 C82 206 52 176 52 130 L52 66 Z" fill="none" stroke="#FFFFFF" strokeWidth="7" strokeLinejoin="round" />
-        <Circle cx="120" cy="128" r="46" fill="#FFFFFF" />
-        <Circle cx="120" cy="128" r="46" fill="none" stroke={primaryColor} strokeWidth="6" />
-        <Circle cx="120" cy="128" r="28" fill="none" stroke={primaryColor} strokeWidth="6" />
-        <Circle cx="120" cy="128" r="10" fill={primaryColor} />
-        <Circle cx="138" cy="110" r="6" fill="#FFFFFF" opacity={0.9} />
-      </Svg>
-    );
-  }
-
   return (
-    <Svg width={width} height={height} viewBox="0 0 680 400" {...props}>
-      <G transform="translate(140,80)">
-        <Rect x="0" y="0" width="240" height="240" rx="52" fill={bgColor} stroke={primaryColor} strokeWidth="1" />
-        <Path d="M120 40 L188 66 L188 130 C188 176 158 206 120 220 C82 206 52 176 52 130 L52 66 Z" fill="none" stroke="#FFFFFF" strokeWidth="7" strokeLinejoin="round" />
-        <Circle cx="120" cy="128" r="46" fill="#FFFFFF" />
-        <Circle cx="120" cy="128" r="46" fill="none" stroke={primaryColor} strokeWidth="6" />
-        <Circle cx="120" cy="128" r="28" fill="none" stroke={primaryColor} strokeWidth="6" />
-        <Circle cx="120" cy="128" r="10" fill={primaryColor} />
-        <Circle cx="138" cy="110" r="6" fill="#FFFFFF" opacity={0.9} />
-      </G>
-
-      <G transform="translate(420,150)">
-        <SvgText x="0" y="30" fontSize="42" fontWeight="700" fill={textColor}>
-          Guardio
-        </SvgText>
-        <SvgText x="0" y="78" fontSize="42" fontWeight="700" fill={textColor}>
-          Lens
-        </SvgText>
-      </G>
+    <Svg width={width} height={height} viewBox="0 0 240 240" {...props}>
+      <Rect x="0" y="0" width="240" height="240" rx="52" fill={bgColor} stroke={primaryColor} strokeWidth="1" />
+      <Path d="M120 40 L188 66 L188 130 C188 176 158 206 120 220 C82 206 52 176 52 130 L52 66 Z" fill="none" stroke="#FFFFFF" strokeWidth="7" strokeLinejoin="round" />
+      <Circle cx="120" cy="128" r="46" fill="#FFFFFF" />
+      <Circle cx="120" cy="128" r="46" fill="none" stroke={primaryColor} strokeWidth="6" />
+      <Circle cx="120" cy="128" r="28" fill="none" stroke={primaryColor} strokeWidth="6" />
+      <Circle cx="120" cy="128" r="10" fill={primaryColor} />
+      <Circle cx="138" cy="110" r="6" fill="#FFFFFF" opacity={0.9} />
     </Svg>
   );
 };

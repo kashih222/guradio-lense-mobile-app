@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/lib/supabase';
 import SplashScreen from '../components/SplashScreen';
 
 export default function Index() {
@@ -13,8 +13,8 @@ export default function Index() {
 
   async function checkSession() {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      setLoggedIn(!!token);
+      const { data: { session } } = await supabase.auth.getSession();
+      setLoggedIn(!!session);
     } catch (err) {
       console.log('Error checking session', err);
     } finally {
@@ -27,8 +27,8 @@ export default function Index() {
   }
 
   return loggedIn ? (
-    <Redirect href="/home" />
+    <Redirect href="/(tabs)/home" />
   ) : (
-    <Redirect href="/login" />
+    <Redirect href="/(auth)/login" />
   );
 }
